@@ -125,7 +125,7 @@ if (parameterFile.is_open()){
     parameterFile.close();
 }
 else
-    std::cerr << "ERROR: could not open specified file: " << cfgFilename << ". Check path and spelling and make sure the file exists\n";
+    std::cerr << "ERROR: could not open specified file: " << cfgFilename << " . Check path and spelling and make sure the file exists\n";
 
 
 }

@@ -69,7 +69,7 @@ void processFacades(std::vector< pcl::PointCloud<PointT> > facadeVec,
 
         // read CLoudSubtractor values from config file
         std::vector<float> params;
-        readParamsFromFile("../cfg/cloudSubtractor.cfg", params, true);
+        readParamsFromFile("./cfg/cloudSubtractor.cfg", params, true);
 
 
         // create cloudSubtractor object and call the necessary input functions
