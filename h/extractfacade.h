@@ -31,6 +31,11 @@ public:
         grndOffset_ (1.)
         {};
 
+    virtual ~extractFacade ()
+    {
+
+    }
+
     // public functions
     inline void setGrndOffset(float offset) {grndOffset_ = offset;}
     bool applyFilter( std::vector< typename pcl::PointCloud<T> > & Out) { detectFacades(); Out = facades_; }  //return true if within range else return false.
