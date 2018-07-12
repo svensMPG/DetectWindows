@@ -16,7 +16,7 @@
 #include <boost/filesystem.hpp>
 
 // libLAS library
-#include <liblas/liblas.hpp>
+//#include <liblas/liblas.hpp>
 
 // OpenCV
 //#include <opencv2/core/core.hpp>
