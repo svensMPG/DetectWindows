@@ -14,12 +14,17 @@
 #include <pcl/visualization/cloud_viewer.h>
 #include <pcl/ModelCoefficients.h>
 
+#include <pcl/kdtree/kdtree.h>
+#include <pcl/features/normal_3d.h>
+
+
 #include <pcl/filters/project_inliers.h>
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 
 #include <pcl/common/distances.h>
 
+#include <pcl/segmentation/region_growing.h>
 
 
 // openCV
@@ -35,6 +40,52 @@
 
 typedef pcl::PointXYZI PointT;
 
+
+
+
+
+template <typename PointInT>
+void
+regionGrowing (typename pcl::PointCloud<PointInT>::ConstPtr cloud,
+               typename pcl::PointCloud<pcl::Normal>::ConstPtr normals)
+{
+
+//  typename pcl::search::Search<PointInT>::Ptr tree = boost::shared_ptr<pcl::search::Search<PointInT> > (new pcl::search::KdTree<PointInT>);
+    typename pcl::search::KdTree<PointInT>::Ptr tree (new pcl::search::KdTree<PointInT>);
+
+/*
+  pcl::IndicesPtr indices (new std::vector <int>);
+  pcl::PassThrough<PointInT> pass;
+  pass.setInputCloud (cloud);
+  pass.setFilterFieldName ("z");
+  pass.setFilterLimits (0.0, 1.0);
+  pass.filter (*indices);
+*/
+
+  typename pcl::RegionGrowing<PointInT, pcl::Normal> reg;
+  reg.setMinClusterSize (500);
+  reg.setMaxClusterSize (1000000);
+  reg.setSearchMethod (tree);
+  reg.setNumberOfNeighbours (30);
+  reg.setInputCloud (cloud);
+  //reg.setIndices (indices);
+  reg.setInputNormals (**normals);
+  reg.setSmoothnessThreshold (3.0 / 180.0 * M_PI);
+  reg.setCurvatureThreshold (1.0);
+
+  std::vector <pcl::PointIndices> clusters;
+  reg.extract (clusters);
+
+  pcl::PointCloud <pcl::PointXYZRGB>::Ptr colored_cloud = reg.getColoredCloud ();
+  pcl::visualization::CloudViewer pclViewer ("Cluster viewer");
+  pclViewer.showCloud(colored_cloud);
+  while (!pclViewer.wasStopped ())
+  {
+  }
+}
+
+
+
 ///////////////////////////////////////////////////////////////////////////////////////
 template <typename PointInT>
 void
@@ -47,6 +98,31 @@ viewer (typename pcl::PointCloud<PointInT>::Ptr &cloud)
   while (!viewer.wasStopped ())
   {
   }
+}
+
+
+/////////////////////////
+/// \brief visualize a given point cloud with the accompaning normals
+/// \param First parameter is the point cloud of any given type (template functin). Second is the set of normals pre-computed for this point cloud.
+/// \return void
+template <typename PointInT>
+boost::shared_ptr< typename pcl::visualization::PCLVisualizer> normalVis (
+    typename pcl::PointCloud<PointInT>::ConstPtr cloud,
+    typename pcl::PointCloud<pcl::Normal>::ConstPtr normals)
+{
+  // --------------------------------------------------------
+  // -----Open 3D viewer and add point cloud and normals-----
+  // --------------------------------------------------------
+  boost::shared_ptr<pcl::visualization::PCLVisualizer> pclViewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
+  pclViewer->setBackgroundColor (0, 0, 0);
+  //pcl::visualization::PointCloudColorHandlerRGBField <PointInT> rgb(cloud);
+  pcl::visualization::PointCloudColorHandlerCustom<PointInT> single_color (cloud, 0, 128, 0);
+  pclViewer->addPointCloud<PointInT> (cloud, single_color, "sample cloud");
+  pclViewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "sample cloud");
+  pclViewer->addPointCloudNormals<PointInT, pcl::Normal> (cloud, normals, 10, 0.5, "normals");
+  pclViewer->addCoordinateSystem (1.0);
+  pclViewer->initCameraParameters ();
+  return (pclViewer);
 }
 
 

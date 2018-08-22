@@ -12,15 +12,17 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/filters/passthrough.h>
 
+#include <pcl/visualization/pcl_visualizer.h>
+
 // Boost
 #include <boost/filesystem.hpp>
 
 // libLAS library
-//#include <liblas/liblas.hpp>
+#include <liblas/liblas.hpp>
 
 // OpenCV
-//#include <opencv2/core/core.hpp>
-//#include <opencv2/viz/vizcore.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/viz/vizcore.hpp>
 
 
 //include own libs and classes here
