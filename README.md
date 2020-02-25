@@ -1,6 +1,12 @@
 # DetectWindows
 DetectWindows from point clouds of buildings from mobile mapping drives. HighRes point clouds are required, e.g. higher than what a Velodyne64 laser can achieve. However, the issue with the Velodyne scanners might not just be the lower resolution but the organized structure of the data that could lead to singularities (not confirmed, just an assumption).
 
+Detailed explaination of the steps of the method can be found in the following paper (in German):
+
+*Schneider, S., Coors, V. (2018). Automatische Extraktion von Fenstern in 3D Punktwolken mittels einer hierarchischen Methode. In T. P. Kersten, E. Gülch, J. Schiewe, T. H. Kolbe, & U. Stilla (Hrsg.), Wissenschaftlich-Technische Jahrestagung der DGPF und PFGK18 Tagung (pp. 559–572). Munich, Germany: Publikationen der DGPF.*
+
+**If you use this code for your work, please cite the work above.**
+
 ## Requirements
 The code was developed on a Ubunutu 16.04 system and has only be build and tested on this system. Theoretically, the could should be able to run on Windows, if all the dependencies are fulfilled - this was not tested.
 
@@ -46,15 +52,14 @@ Also there is `STEP_05_bBox.pcd` which contains only the corner points of each w
 
 ```
 Note that the **IDs are incremented by a value of two starting from ID 4**. This has historical reasons and can be changed. I did not get aorund it yet.
+Also note that the **PCL only supports float data types** for point clouds (**not double**). This has some implications if data is stored in geographic SRS, as the values are very large and **precision will be lost. This leads to artifacts in your the data**. To solve this issue, data needs to be centered (see Usage below).
 
 ## Usage:
 run from shell as: .detectWindows /home/of/your/DATAset.las [-setZero] [-downsample 0.4]
-- setZero will center your point cloud
+- setZero will center your point cloud to Xmin, Ymin, Zmin to avoid artifacts for data with large coordinates 
+- downsample FLOAT-VALUE : will reduce the voxel size by a given amount. Valid values are between [0.02,1]
 
 [] are optional. If point clouds are very large, e.g. > 10M points, than it is a good idea to downsample the data so the program runs more stable and much faster. For large number of input points and large facades, you can quickly run out of memorey!
-
-
-
 
 
 ## License
