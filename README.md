@@ -4,6 +4,7 @@ DetectWindows from point clouds of buildings from mobile mapping drives. HighRes
 Detailed explaination of the steps of the method can be found in the following paper (in German):
 
 *Schneider, S., Coors, V. (2018). Automatische Extraktion von Fenstern in 3D Punktwolken mittels einer hierarchischen Methode. In T. P. Kersten, E. Gülch, J. Schiewe, T. H. Kolbe, & U. Stilla (Hrsg.), Wissenschaftlich-Technische Jahrestagung der DGPF und PFGK18 Tagung (pp. 559–572). Munich, Germany: Publikationen der DGPF.*
+https://www.dgpf.de/src/tagung/jt2018/proceedings/proceedings/papers/44_PFGK18_P03_Schneider_Coors.pdf
 
 **If you use this code for your work, please cite the work above.**
 
