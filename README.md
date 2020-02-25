@@ -1,4 +1,5 @@
 # DetectWindows
+## General information
 DetectWindows from point clouds of buildings from mobile mapping drives. HighRes point clouds are required, e.g. higher than what a Velodyne64 laser can achieve. However, the issue with the Velodyne scanners might not just be the lower resolution but the organized structure of the data that could lead to singularities (not confirmed, just an assumption).
 
 Detailed explaination of the steps of the method can be found in the following paper (in German):
@@ -24,7 +25,7 @@ Note 2: VTK is used for visualization of the intermediate steps. For batch proce
 
 Note 3: Only few routines from the OpenCV library were used in order to project the detected window corner points onto a 2d plain and estimate a bounding box. You might write your own routine to do this to reduce dependencies. 
 
-## General information about the software
+## Software description
 
 **Input**: is a single point cloud file as *.PCD, *.las or *.txt/*.xyz (tested only with unstructured / unorganized point clouds but others might work as well).
 Data needs to be stored in columns of X Y Z [intensity] for each point. Intensity is not used in this method.
@@ -60,7 +61,7 @@ run from shell as: .detectWindows /home/of/your/DATAset.las [-setZero] [-downsam
 - setZero will center your point cloud to Xmin, Ymin, Zmin to avoid artifacts for data with large coordinates 
 - downsample FLOAT-VALUE : will reduce the voxel size by a given amount. Valid values are between [0.02,1]
 
-[] are optional. If point clouds are very large, e.g. > 10M points, than it is a good idea to downsample the data so the program runs more stable and much faster. For large number of input points and large facades, you can quickly run out of memorey!
+[argument] are optional. If point clouds are very large, e.g. > 10M points, it is a good idea to downsample the data so the program runs more stable and much faster. For large number of input points and large facades, you can quickly run out of memorey!
 
 
 ## License
