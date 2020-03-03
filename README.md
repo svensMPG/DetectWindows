@@ -64,8 +64,8 @@ run from shell as: .detectWindows /home/of/your/DATAset.las [-setZero] [-downsam
 
 
 ## License
-The MIT License
-Copyright (c) 2018 Sven Schneider, Hochschule fuer Technik Stuttgart
+GNU GENERAL PUBLIC LICENSE Version 3
+Copyright (c) 2018 Sven Schneider
 
 
 
