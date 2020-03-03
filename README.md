@@ -10,7 +10,7 @@ https://www.dgpf.de/src/tagung/jt2018/proceedings/proceedings/papers/44_PFGK18_P
 **If you use this code for your work, please cite the work above.**
 
 ## Requirements
-The code was developed on a Ubunutu 16.04 system and has only be build and tested on this system. Theoretically, the could should be able to run on Windows, if all the dependencies are fulfilled - this was not tested.
+The code was developed on a Ubunutu 16.04 system and has only be build and tested on this system. Theoretically, the code should be able to be build and run on Windows, if all the dependencies are fulfilled - this was not tested.
 
 The following libraries and versions were used:
 
@@ -28,12 +28,12 @@ Note 3: Only few routines from the OpenCV library were used in order to project 
 ## Software description
 
 **Input**: is a single point cloud file as *.PCD, *.las or *.txt/*.xyz (tested only with unstructured / unorganized point clouds but others might work as well).
-Data needs to be stored in columns of X Y Z [intensity] for each point. Intensity is not used in this method.
+Data needs to be stored in columns of X Y Z [intensity][R G B] for each point. Intensity and RGB is not used in this method.
 You can easily create your own PCD files from simple TXT / XYZ files be manually adding the header info. For this please see the documentation of the PCD file format at: http://pointclouds.org/documentation/tutorials/pcd_file_format.php
-Note that PCD files do not store information about the spatial reference system (SRS), you could however add a comment into the header.
+Note that PCD files do not store information about the spatial reference system (SRS), you could however add a comment into the header and prcesses this by writing your own routines.
 **Units in the input file are assumed to be in meters, not degrees.**
 
-**Output**: Along the processing chain, certain point clouds are written to disc, such as the hull, the redued input point cloud in PCD format, and so on (this can all be commented out to reduce clutter).
+**Output**: Along the processing chain, certain point clouds are written to disc, such as the (concave) hull, the reduced input point cloud in PCD format, and so on (this can all be commented out to reduce clutter).
 Main outputs are: cloudWithWindows.pcd which contains all points of the contour found of the window found where each point beloing to the same window will have the same ID encoded as RGB values: e.g.
 ```
      X           Y           Z       R G B
@@ -41,20 +41,17 @@ Main outputs are: cloudWithWindows.pcd which contains all points of the contour 
 358951.01914 5701437.074 132.6170413 8 8 8
 ....
 ```
-Also there is `STEP_05_bBox.pcd` which contains only the corner points of each window. Each corner point of a particular window will have the same ID. In this file, there are always 4 points associated with each window, thus 4 points having the same ID. The difference here is also, that the IDs are not encoded as RGB but as single values, which could be viewed as the intensity channel. 
+Also there is `STEP_05_bBox.pcd` which contains only the corner points of each window. Each corner point of a particular window will have the same ID. In this file, there are always 4 points associated with each window, thus 4 points having the same ID. 
 
 ```
     X         Y         Z     I
-57.277615 30.209835 17.021194 14
-53.980743 28.266335 18.219912 16
-53.968925 28.26738 17.02471 16
-52.551678 27.431767 17.037991 16
-52.563492 27.430721 18.233192 16
-61.172234 32.497196 17.019188 18
-
+358951.02199 5701437.075 132.3170307 8
+358952.01914 5701436.074 132.6170413 8 
+358953.02199 5701436.075 132.3170307 8 
+358951.01914 5701437.074 132.6170413 8
 ```
 Note that the **IDs are incremented by a value of two starting from ID 4**. This has historical reasons and can be changed. I did not get aorund it yet.
-Also note that the **PCL only supports float data types** for point clouds (**not double**). This has some implications if data is stored in geographic SRS, as the values are very large and **precision will be lost. This leads to artifacts in your the data**. To solve this issue, data needs to be centered (see Usage below).
+Also note that the **PCL only supports float data types** for point clouds (**not double**). This has some implications if data is stored in geographic SRS, as the values are very large and **precision will be lost. This leads to artifacts in your the data**. To solve this issue, data needs to be centered using the `-setZero` option (see Usage below).
 
 ## Usage:
 run from shell as: .detectWindows /home/of/your/DATAset.las [-setZero] [-downsample 0.4]
