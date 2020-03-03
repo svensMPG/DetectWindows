@@ -7,6 +7,7 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <numeric>
 
 // pcl
 #include <pcl/io/pcd_io.h>
@@ -14,77 +15,147 @@
 #include <pcl/visualization/cloud_viewer.h>
 #include <pcl/ModelCoefficients.h>
 
-#include <pcl/kdtree/kdtree.h>
-#include <pcl/features/normal_3d.h>
-
-
 #include <pcl/filters/project_inliers.h>
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 
 #include <pcl/common/distances.h>
 
-#include <pcl/segmentation/region_growing.h>
 
 
 // openCV
-//#include <opencv2/core/core.hpp>
+#include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-//#include <opencv2/opencv.hpp>
+#include <opencv2/opencv.hpp>
 
-//#include <opencv2/viz/vizcore.hpp>
+#include <opencv2/viz/vizcore.hpp>
 
-
-
-
-
-typedef pcl::PointXYZI PointT;
-
-
-
-
-
-template <typename PointInT>
-void
-regionGrowing (typename pcl::PointCloud<PointInT>::ConstPtr cloud,
-               typename pcl::PointCloud<pcl::Normal>::ConstPtr normals)
+template <typename PointT>
+void addMinValues(const typename pcl::PointCloud<PointT>::Ptr &cloud,
+                  std::vector< std::vector<double> > &pointVector,
+                  std::vector< unsigned int > &intensityVec,
+                  const std::vector<double> minvals)
 {
 
-//  typename pcl::search::Search<PointInT>::Ptr tree = boost::shared_ptr<pcl::search::Search<PointInT> > (new pcl::search::KdTree<PointInT>);
-    typename pcl::search::KdTree<PointInT>::Ptr tree (new pcl::search::KdTree<PointInT>);
+    double x,y,z;
+    std::setprecision(11);
 
-/*
-  pcl::IndicesPtr indices (new std::vector <int>);
-  pcl::PassThrough<PointInT> pass;
-  pass.setInputCloud (cloud);
-  pass.setFilterFieldName ("z");
-  pass.setFilterLimits (0.0, 1.0);
-  pass.filter (*indices);
-*/
+    // check if input cloud has an intensity field. If so use provided data, else create random values
+    bool hasIntensity = false;
+    std::string pcFields = pcl::getFieldsList(*cloud);
+    if (pcFields.find("intensity") < std::string::npos-1)
+        hasIntensity = true;
 
-  typename pcl::RegionGrowing<PointInT, pcl::Normal> reg;
-  reg.setMinClusterSize (500);
-  reg.setMaxClusterSize (1000000);
-  reg.setSearchMethod (tree);
-  reg.setNumberOfNeighbours (30);
-  reg.setInputCloud (cloud);
-  //reg.setIndices (indices);
-  reg.setInputNormals (**normals);
-  reg.setSmoothnessThreshold (3.0 / 180.0 * M_PI);
-  reg.setCurvatureThreshold (1.0);
 
-  std::vector <pcl::PointIndices> clusters;
-  reg.extract (clusters);
+    for(int i=0; i< cloud->size(); i++){
+        x =  (minvals[0] + static_cast<double> (cloud->points[i].x) ) ;
+        y =  (minvals[1] + static_cast<double> (cloud->points[i].y) ) ;
+        z =  (minvals[2] + static_cast<double> (cloud->points[i].z) ) ;
 
-  pcl::PointCloud <pcl::PointXYZRGB>::Ptr colored_cloud = reg.getColoredCloud ();
-  pcl::visualization::CloudViewer pclViewer ("Cluster viewer");
-  pclViewer.showCloud(colored_cloud);
-  while (!pclViewer.wasStopped ())
-  {
-  }
+        if (hasIntensity)
+            intensityVec.push_back( static_cast< unsigned int> (cloud->points[i].intensity) );
+        else
+            intensityVec.push_back( static_cast<unsigned int>( (rand() % 255)) );
+
+        std::vector<double> point = {x,y,z};
+       // std::cerr << "DEBUG: point after adding values: \t " <<
+        //             point[0] << "\t" << point[1] << "\t" <<  point[2] << std::endl;
+        pointVector.push_back(point);
+    }
+
+}
+
+template <typename PointT>
+void addMinValuesToBBOX(const typename pcl::PointCloud<PointT>::Ptr &cloud,
+                  std::vector< std::vector<double> > &pointVector,
+                  std::vector< unsigned int > &intensityVec,
+                  const std::vector<double> minvals)
+{
+
+    double x,y,z;
+    std::setprecision(11);
+
+    // check if input cloud has an intensity field. If so use provided data, else create random values
+    bool hasIntensity = false;
+    std::string pcFields = pcl::getFieldsList(*cloud);
+    if (pcFields.find("intensity") < std::string::npos-1)
+        hasIntensity = true;
+
+
+    for(int i=0; i< cloud->size(); i++){
+        x =  (minvals[0] + static_cast<double> (cloud->points[i].x) ) ;
+        y =  (minvals[1] + static_cast<double> (cloud->points[i].y) ) ;
+        z =  (minvals[2] + static_cast<double> (cloud->points[i].z) ) ;
+
+        if (hasIntensity)
+            intensityVec.push_back( static_cast< unsigned int> (cloud->points[i].intensity) );
+        else
+            intensityVec.push_back( static_cast<unsigned int>( (rand() % 255)) );
+
+        std::vector<double> point = {x,y,z};
+
+        pointVector.push_back(point);
+
+        point.clear();
+
+        point.push_back( x-0.1); point.push_back(y); point.push_back( z); pointVector.push_back(point); point.clear();
+        intensityVec.push_back( static_cast< unsigned int> (cloud->points[i].intensity) );
+        point.push_back( x+0.1); point.push_back(y); point.push_back( z); pointVector.push_back(point); point.clear();
+        intensityVec.push_back( static_cast< unsigned int> (cloud->points[i].intensity) );
+        point.push_back( x); point.push_back(y-.1); point.push_back( z); pointVector.push_back(point); point.clear();
+        intensityVec.push_back( static_cast< unsigned int> (cloud->points[i].intensity) );
+        point.push_back( x); point.push_back(y+0.1); point.push_back( z); pointVector.push_back(point); point.clear();
+        intensityVec.push_back( static_cast< unsigned int> (cloud->points[i].intensity) );
+        point.push_back( x); point.push_back(y); point.push_back( z-0.1); pointVector.push_back(point); point.clear();
+        intensityVec.push_back( static_cast< unsigned int> (cloud->points[i].intensity) );
+        point.push_back( x); point.push_back(y); point.push_back( z+0.1); pointVector.push_back(point); point.clear();
+        intensityVec.push_back( static_cast< unsigned int> (cloud->points[i].intensity) );
+        point.push_back( x+0.1); point.push_back(y+0.1); point.push_back( z+0.1); pointVector.push_back(point); point.clear();
+        intensityVec.push_back( static_cast< unsigned int> (cloud->points[i].intensity) );
+        point.push_back( x-0.1); point.push_back(y-0.1); point.push_back( z-0.1); pointVector.push_back(point); point.clear();
+        intensityVec.push_back( static_cast< unsigned int> (cloud->points[i].intensity) );
+
+
+    }
+
 }
 
 
+int toXYZ( std::string file2Write,
+          const std::vector< std::vector<double> > &pointVector,
+          const std::vector< unsigned int > &intensityVec )
+{
+
+   // std::cout << "debug: writing the point cloud to text file. This will take some time....\n";
+
+    std::string fileToWrite = file2Write + ".xyz";
+    std::ofstream txtfile (fileToWrite);
+
+    if (!txtfile.is_open() ) {
+        PCL_ERROR ("Couldn't open file for writing ");
+        return -1;
+    }
+
+    txtfile.precision(11);
+
+    unsigned int intensity;
+
+    for(int i=0; i< pointVector.size(); i++){
+
+        intensity = intensityVec[i];
+        std::vector< double > pt = pointVector.at(i);
+        txtfile << pt[0] << " " << pt[1] << " " << pt[2] << " " << intensity << " " << intensity << " " << intensity << std::endl;
+    }
+
+
+    txtfile.close();
+    std::cerr << "Saved " << pointVector.size() << " Points to " << fileToWrite << " \n" << std::endl;
+
+
+}
+
+
+typedef pcl::PointXYZI PointT;
 
 ///////////////////////////////////////////////////////////////////////////////////////
 template <typename PointInT>
@@ -101,29 +172,6 @@ viewer (typename pcl::PointCloud<PointInT>::Ptr &cloud)
 }
 
 
-/////////////////////////
-/// \brief visualize a given point cloud with the accompaning normals
-/// \param First parameter is the point cloud of any given type (template functin). Second is the set of normals pre-computed for this point cloud.
-/// \return void
-template <typename PointInT>
-boost::shared_ptr< typename pcl::visualization::PCLVisualizer> normalVis (
-    typename pcl::PointCloud<PointInT>::ConstPtr cloud,
-    typename pcl::PointCloud<pcl::Normal>::ConstPtr normals)
-{
-  // --------------------------------------------------------
-  // -----Open 3D viewer and add point cloud and normals-----
-  // --------------------------------------------------------
-  boost::shared_ptr<pcl::visualization::PCLVisualizer> pclViewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
-  pclViewer->setBackgroundColor (0, 0, 0);
-  //pcl::visualization::PointCloudColorHandlerRGBField <PointInT> rgb(cloud);
-  pcl::visualization::PointCloudColorHandlerCustom<PointInT> single_color (cloud, 0, 128, 0);
-  pclViewer->addPointCloud<PointInT> (cloud, single_color, "sample cloud");
-  pclViewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "sample cloud");
-  pclViewer->addPointCloudNormals<PointInT, pcl::Normal> (cloud, normals, 10, 0.5, "normals");
-  pclViewer->addCoordinateSystem (1.0);
-  pclViewer->initCameraParameters ();
-  return (pclViewer);
-}
 
 
 //////////////////////////////////////////////////////////////////////
@@ -169,7 +217,7 @@ float calcAreaFromBbox(std::vector<Eigen::Vector3f> bBox, float &aspectRatio){
 
 
     float area = fabs(s0 * s1);
-    std::cout << "Window area: " << area << std::endl;
+    std::cout << "Window area: " << area << " sqm." << std::endl;
     return area;
 }
 
@@ -203,7 +251,7 @@ if (parameterFile.is_open()){
     parameterFile.close();
 }
 else
-    std::cerr << "ERROR: could not open specified file: " << cfgFilename << " . Check path and spelling and make sure the file exists\n";
+    std::cerr << "ERROR: could not open specified file: " << cfgFilename << ". Check path and spelling and make sure the file exists\n";
 
 
 }
@@ -215,11 +263,17 @@ findBoundingBox(pcl::PointCloud<PointT>::Ptr &cloud, std::vector<Eigen::Vector3f
   //std::vector<Eigen::Vector3f> table_top_bbx;
 
   // Project points onto the table plane
-  pcl::SACSegmentation<PointT> seg;
+
+    pcl::SACSegmentation<PointT> seg;
   pcl::ModelCoefficients::Ptr planeCoefficients (new pcl::ModelCoefficients ());
   pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+/*
+  //debug:
+  for (int i=0; i< cloud->points.size(); i++)
+      std::cout << "x: " << cloud->points[i].x << "\t y: " <<
+              cloud->points[i].y << "\t z: " << cloud->points[i].z << std::endl;
 
-
+*/
   seg.setOptimizeCoefficients (true);
   seg.setModelType (pcl::SACMODEL_PLANE);
   seg.setMethodType (pcl::SAC_RANSAC);
@@ -234,6 +288,11 @@ findBoundingBox(pcl::PointCloud<PointT>::Ptr &cloud, std::vector<Eigen::Vector3f
   proj.setInputCloud(cloud);
   proj.setModelCoefficients(planeCoefficients);
   proj.filter(projected_cloud);
+
+  pcl::PointCloud<PointT>::Ptr temp (new pcl::PointCloud<PointT> ());
+  pcl::copyPointCloud(projected_cloud,*temp);
+  //pcl::copyPointCloud(*cloud,*temp);
+  //viewer<PointT> (temp);
 
   // store the table top plane parameters
   Eigen::Vector3f plane_normal;
@@ -254,11 +313,18 @@ findBoundingBox(pcl::PointCloud<PointT>::Ptr &cloud, std::vector<Eigen::Vector3f
                       projected_cloud.points[0].z);
   for(unsigned int ii=0; ii<projected_cloud.points.size(); ii++)
   {
-    Eigen::Vector3f p3d(projected_cloud.points[ii].x,
-                         projected_cloud.points[ii].y,
-                         projected_cloud.points[ii].z);
+    Eigen::Vector3f p3d;
+    if ( std::isnan( projected_cloud.points[ii].x) ||
+         std::isnan( projected_cloud.points[ii].y) ||
+         std::isnan( projected_cloud.points[ii].z) )
+        continue;
+    else{
+          p3d[0] = projected_cloud.points[ii].x;
+          p3d[1] = projected_cloud.points[ii].y;
+          p3d[2] = projected_cloud.points[ii].z;
+    }
 
-    // subtract all 3D points with a point in the plane
+      // subtract all 3D points with a point in the plane
     // this will move the origin of the 3D coordinate system
     // onto the plane
      p3d = p3d - p0;
@@ -275,16 +341,16 @@ findBoundingBox(pcl::PointCloud<PointT>::Ptr &cloud, std::vector<Eigen::Vector3f
   cv::Point2f rrPts[4];
   rrect.points(rrPts);
 
-  /*
-  double arclength = cv::arcLength(points, true);
-  double contArea = cv::contourArea( points);
 
-  double compactness = (4.*PI)* contArea / (4.*arclength*arclength);
+ // double arclength = cv::arcLength(points, true);
+  // double contArea = cv::contourArea( points);
 
-  std::cout << "arclength: " << arclength << "  contArea: " <<
-               contArea << "  compactness: " << compactness << std::endl;
+ // double compactness = (4.*PI)* contArea / (4.*arclength*arclength);
 
-*/
+  //std::cout << "arclength: " << arclength << "  contArea: " <<
+   //            contArea << "  compactness: " << compactness << std::endl;
+
+
 
   //store the table top bounding points in a vector
   for(unsigned int ii=0; ii<4; ii++)
@@ -292,7 +358,7 @@ findBoundingBox(pcl::PointCloud<PointT>::Ptr &cloud, std::vector<Eigen::Vector3f
     Eigen::Vector3f pbbx(rrPts[ii].x*u + rrPts[ii].y*v + p0);
     table_top_bbx.push_back(pbbx);
   }
- // Eigen::Vector3f center(rrect.center.x*u + rrect.center.y*v + p0);
- // table_top_bbx.push_back(center);
+  Eigen::Vector3f center(rrect.center.x*u + rrect.center.y*v + p0);
+  table_top_bbx.push_back(center);
 
 }

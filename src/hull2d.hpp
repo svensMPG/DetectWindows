@@ -161,8 +161,8 @@ applyHull (pcl::PointCloud<PointT>::Ptr cloud_filtered, pcl::PointCloud<PointT>:
       std::cout << "average number of neighboring points < 8. Continuing with processing... " << std::endl;
   else
   {
-    std::cerr << "average number of neighboring points > 8, increasing Alpha by 0.15 => Alpha: " << chull.getAlpha() + 0.15 << " and reapplying hullDetection... " << std::endl;
-    chull.setAlpha (chull.getAlpha() + 0.1);
+    std::cerr << "average number of neighboring points > 8, increasing Alpha by 0.05 => Alpha: " << chull.getAlpha() + 0.05 << " and reapplying hullDetection... " << std::endl;
+    chull.setAlpha (chull.getAlpha() + 0.05);
     chull.reconstruct (*cloud_hull);
   }
 

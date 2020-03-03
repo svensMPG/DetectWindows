@@ -16,7 +16,7 @@ template <typename PointT>
 int
 readLAS2PCD(std::string fileToRead,
             typename pcl::PointCloud<PointT>::Ptr &cloud,
-            std::vector<double> minXYZValues,
+            std::vector<double> &minXYZValues,
             float gridLeafSize,
             bool subtractMinVals)
 {

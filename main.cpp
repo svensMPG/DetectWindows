@@ -12,8 +12,6 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/filters/passthrough.h>
 
-#include <pcl/visualization/pcl_visualizer.h>
-
 // Boost
 #include <boost/filesystem.hpp>
 
@@ -21,8 +19,8 @@
 #include <liblas/liblas.hpp>
 
 // OpenCV
-#include <opencv2/core/core.hpp>
-#include <opencv2/viz/vizcore.hpp>
+//#include <opencv2/core/core.hpp>
+//#include <opencv2/viz/vizcore.hpp>
 
 
 //include own libs and classes here
@@ -42,8 +40,8 @@ typedef pcl::PointXYZI PointT;
 using namespace std;
 
 
-void processFacades(std::vector< pcl::PointCloud<PointT> > facadeVec,
-                    pcl::PointCloud<PointT>::Ptr cloudWithWindows)
+void processFacades(std::vector< pcl::PointCloud<PointT> > facadeVec,                    
+                    const std::vector<double> &minXYZValues)
 {
     float facadeArea = 0;
     float windowArea = 0;
@@ -58,20 +56,23 @@ void processFacades(std::vector< pcl::PointCloud<PointT> > facadeVec,
         pcl::PointCloud<PointT>::Ptr invertedCloud (new pcl::PointCloud<PointT>);
         pcl::PointCloud<PointT>::Ptr concaveCloud (new pcl::PointCloud<PointT>);
         pcl::PointCloud<PointT>::Ptr lines (new pcl::PointCloud<PointT>);
+        pcl::PointCloud<PointT>::Ptr cloudWithWindows (new pcl::PointCloud<PointT>);
 
         *tmpFacade = facadeVec.at(f);
         facadeArea = 0;
         windowArea = 0;
+        viewer<PointT> (tmpFacade);
 
-        AreaFromConcaveHull<PointT> AObj;
-        AObj.setInputCloud(tmpFacade);
+
+        //AreaFromConcaveHull<PointT> AObj;
+       // AObj.setInputCloud(tmpFacade);
         //AObj.greedyArea(facadeArea);
 
         facadeAreaVec.push_back(facadeArea);
 
         // read CLoudSubtractor values from config file
         std::vector<float> params;
-        readParamsFromFile("./cfg/cloudSubtractor.cfg", params, true);
+        readParamsFromFile("../cfg/cloudSubtractor.cfg", params, true);
 
 
         // create cloudSubtractor object and call the necessary input functions
@@ -89,11 +90,18 @@ void processFacades(std::vector< pcl::PointCloud<PointT> > facadeVec,
         applyHull(invertedCloud, concaveCloud);
         //viewer<PointT> (concaveCloud);
 
+
         RemoveConcaveHullFrame<PointT> rmFrame;
         rmFrame.setInputCloud(concaveCloud);
         rmFrame.setTollerance(0.1);
         rmFrame.apply(concaveCloud);
         viewer<PointT> (concaveCloud);
+
+        // write output to xyz for 3d tiles convertsion
+        std::vector< std::vector< double > > pointVec;
+        std::vector< unsigned int > intensityVec;
+        addMinValues<PointT>(concaveCloud,pointVec,intensityVec, minXYZValues);
+        toXYZ("hull", pointVec, intensityVec);
 
 /*
         AreaFromConcaveHull<PointT> AreaObj;
@@ -107,7 +115,12 @@ void processFacades(std::vector< pcl::PointCloud<PointT> > facadeVec,
         viewer<PointT> (lines);
 */
 
-        CondEuclClustering(concaveCloud,cloudWithWindows);
+         CondEuclClustering(concaveCloud,cloudWithWindows);
+         pointVec.clear();
+         intensityVec.clear();
+         addMinValues<PointT>(cloudWithWindows,pointVec,intensityVec, minXYZValues);
+         toXYZ("cloudWithWindows", pointVec, intensityVec);
+
 
         int maxLabel = 3; // assuming -2 and 2 for too small and too large clusters, respectively
         int nObj = 0;
@@ -144,18 +157,20 @@ void processFacades(std::vector< pcl::PointCloud<PointT> > facadeVec,
             tmpA = calcAreaFromBbox(bBox,aspectRatio);
             if (aspectRatio > 0.33){
                 windowArea += tmpA;
-                std::cout << "accumulated window area: " << std::setprecision(4) << windowArea << std::endl;
+                std::cout << "accumulated window area: " << std::setprecision(4) << windowArea << " sqm" << std::endl;
             }
             else
                 continue;
 
 
-            for (int ptNr=0; ptNr < bBox.size(); ptNr++){  // for all 4 corners store one point in the the boxCloud variable
+            //for (int ptNr=0; ptNr < bBox.size(); ptNr++){  // for all 4 corners store one point in the the boxCloud variable
+            for (int ptNr=0; ptNr < 4; ptNr++){
                 PointT pt;
                 Eigen::Vector3f tmp(bBox.at(ptNr) );
                 pt.x = tmp(0);
                 pt.y = tmp(1);
                 pt.z = tmp(2);
+                pt.intensity = label;
                 boxCloud->points.push_back( pt );  // store point
                 //tmpFacadel->points.push_back( pt );
             }
@@ -166,15 +181,38 @@ void processFacades(std::vector< pcl::PointCloud<PointT> > facadeVec,
         }
         windowAreaVec.push_back(windowArea);
 
-        std::cout<< "Total window Area / Facade area = " << windowArea << " / " <<
+      /* std::cout<< "Total window Area / Facade area = " << windowArea << " / " <<
                     facadeArea << " = " << windowArea / facadeArea <<
                     " = window-to-wall ratio." <<
                     "But the facadeArea was calculated without windows." << std::endl;
         std::cout << "corrected ratio is: windowArea / (windowArea+FacadeArea)= " <<
                      windowArea / (windowArea+facadeArea) << std::endl;
+                     */
 
-        //viewer<PointT>(boxCloud);
+       // viewer<PointT>(boxCloud);
         //viewer<PointT>(tmpWindow);
+
+        //std::vector< std::vector< double > > pointVec;
+        //std::vector< unsigned int > intensityVec;
+        pointVec.clear();
+        intensityVec.clear();
+        addMinValues<PointT>(boxCloud,pointVec,intensityVec, minXYZValues);
+        toXYZ("STEP_05_bBox", pointVec, intensityVec);
+
+
+        pointVec.clear();
+        intensityVec.clear();
+        addMinValuesToBBOX<PointT>(boxCloud,pointVec,intensityVec, minXYZValues);
+        toXYZ("STEP_05_bBoxForVIS", pointVec, intensityVec);
+
+
+        std::stringstream ss;
+        pcl::PCDWriter writer;
+        ss << "STEP_05_bBox.pcd";
+        writer.write<PointT> (ss.str (), *boxCloud, false); //*
+
+
+
 
     }
 }
@@ -234,6 +272,10 @@ int  main (int argc, char** argv){
 
     ///// end checking parameters.
 
+
+    // store minvalues to restore the original coordinates later after processing is completed
+    std::vector<double> minXYZValues;
+
     if (isPCD){  // if pcd no values will be subtracted because pcd cannot store this precision anyway
         // load pcd file
         if(pcl::io::loadPCDFile<PointT> (argv[1], *cloudIn) == -1) // load the file
@@ -264,8 +306,6 @@ int  main (int argc, char** argv){
     else{
 
 
-        // store minvalues to restore the original coordinates later after processing is completed
-        std::vector<double> minXYZValues;
         // reading in LAS file and returning a PCD cloud XYZI data.
         readLAS2PCD<PointT>(argv[1], cloudIn, minXYZValues, gridLeafSize, subtractMinVals);
     }
@@ -277,7 +317,7 @@ int  main (int argc, char** argv){
 
     getFacades<PointT>(cloudIn, facadeVec, 0.4).applyFilter(facadeVec);  //template class  / function to obtain all vertical planes / facades
 
-    processFacades(facadeVec, cloudFiltered);
+    processFacades(facadeVec, minXYZValues);
 
 
     if (invertedCloud->points.size() > 0){

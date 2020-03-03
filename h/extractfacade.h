@@ -1,6 +1,4 @@
 #ifndef EXTRACTFACADE_H
-#include <boost/thread.hpp>
-
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl/ModelCoefficients.h>
@@ -8,7 +6,6 @@
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/features/normal_3d.h>
-#include <pcl/features/normal_3d_omp.h>
 #include <pcl/kdtree/kdtree.h>
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>
@@ -16,7 +13,6 @@
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 
-#include <pcl/visualization/pcl_visualizer.h>
 
 
 #define EXTRACTFACADE_H
@@ -34,11 +30,6 @@ public:
         distThresh_(distanceThresh),
         grndOffset_ (1.)
         {};
-
-    virtual ~extractFacade ()
-    {
-
-    }
 
     // public functions
     inline void setGrndOffset(float offset) {grndOffset_ = offset;}
@@ -74,40 +65,28 @@ void extractFacade<T>::detectFacades()
 
 
       typename pcl::PointCloud<T>::Ptr cloud_f (new pcl::PointCloud<T>);
-      typename pcl::PointCloud<T>::Ptr cloudFiltered (new pcl::PointCloud<T>);
-       typename pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud_with_normals (new pcl::PointCloud<pcl::PointXYZINormal>);
-        typename pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal>);
 
+
+      typename pcl::PointCloud<T>::Ptr cloudFiltered (new pcl::PointCloud<T>);
+/*
+      pcl::VoxelGrid<T> vg;
+      vg.setInputCloud (input_);
+      vg.setLeafSize (0.1f, 0.1f, 0.1f);
+      vg.filter (*cloudFiltered);
+      std::cout << "PointCloud after filtering has:  " << cloudFiltered->points.size ()  << " data points." << std::endl; //*
+*/
 
         pcl::copyPointCloud(*input_,*cloudFiltered);
+        /*
+      // Create the filtering object
+        typename pcl::StatisticalOutlierRemoval<T> sor;
+        sor.setInputCloud (cloudFiltered);
+        sor.setMeanK (25);
+        sor.setStddevMulThresh (0.5);
+        sor.filter (*cloudFiltered);
+*/
 
-    // estimate normals in point cloud
-        std::cerr << "Computing normals...\n", tt.tic ();
-        pcl::copyPointCloud (*input_, *cloud_with_normals);
-        pcl::NormalEstimationOMP<T, pcl::Normal> ne;
-        // create kd tree datastructure for normal search
-        typename pcl::search::KdTree<T>::Ptr search_tree (new pcl::search::KdTree<T>);
-        ne.setInputCloud (input_);
-        ne.setSearchMethod (search_tree);
-        ne.setRadiusSearch ( 0.3 );
-        ne.compute (*normals);
-        pcl::concatenateFields(*input_, *normals,*cloud_with_normals);
-        std::cerr << ">> Done: " << tt.toc () / 1000.0  << " s\n";
-
-    // show cloud with normals
-        boost::shared_ptr<pcl::visualization::PCLVisualizer> pclViewer;
-        pclViewer = normalVis<T>(input_, normals);
-        while (!pclViewer->wasStopped ())
-          {
-            pclViewer->spinOnce (100);
-            boost::this_thread::sleep (boost::posix_time::microseconds (100000));
-          }
-
-
-        // extract individual clusters using regionGrowing, using Noramls and Curcature as criteria
-        regionGrowing<T> (input_, normals);
-
-        // Create the segmentation object for the planar model and set all the parameters
+      // Create the segmentation object for the planar model and set all the parameters
       typename pcl::SACSegmentation<T> seg;
       pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
       pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
@@ -169,7 +148,7 @@ void extractFacade<T>::detectFacades()
         std::stringstream ss;
         pcl::PCDWriter writer;
         ss << "STEP_01_SurfaceExtracted_" << i << ".pcd";
-        writer.write<T> (ss.str (), *cloudPlane, false); //*
+        //writer.write<T> (ss.str (), *cloudPlane, false); //*
 
         //viewer<T> (cloudPlane);
 
@@ -201,7 +180,7 @@ void extractFacade<T>::detectFacades()
       i=0;
       nr_points = cloudFiltered->points.size ();
       facades_.clear();
-      seg.setDistanceThreshold (0.25);
+      seg.setDistanceThreshold (0.2);
 
       std::cout << "  \n";
 
@@ -263,7 +242,7 @@ void extractFacade<T>::detectFacades()
         writer.write<T> (ss.str (), facades_[j], false); //*
         typename pcl::PointCloud<T>::Ptr tmpFacade (new pcl::PointCloud<T>);
         pcl::copyPointCloud(facades_.at(j), *tmpFacade);
-        viewer<T> (tmpFacade);
+       // viewer<T> (tmpFacade);
 
       }
       std::cout << "detecting planes took : " << tt.toc()/1000 << " seconds. " << std::endl;

@@ -7,9 +7,13 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/extract_indices.h>
 
+#include <pcl/visualization/pcl_visualizer.h>
+
+
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/common/pca.h>
 #include "../h/inrange.h"
+//#include "../src/miscFunctions.hpp"
 #define CLOUDSUBTRACTOR_H
 
 // by Sven Schneider 07/2017
@@ -85,13 +89,28 @@ protected:
 
     pcl::ModelCoefficients::Ptr coefficients_;
 
-
+    std::vector<size_t> sort_indexes(const std::vector<float> &v);
     void detectPlane();
     void makePlaneFromCoefficients();
     void gridSubtraction();
 
 
 };
+
+
+template <typename PointInT>
+std::vector<size_t> CloudSubtractor<PointInT>::sort_indexes(const std::vector<float> &v) {
+
+  // initialize original index locations
+  std::vector<size_t> idx(v.size());
+  std::iota(idx.begin(), idx.end(), 0);
+
+  // sort indexes based on comparing values in v
+  std::sort(idx.begin(), idx.end(),
+       [&v](size_t i1, size_t i2) {return v[i1] < v[i2];} );
+
+  return idx;
+}
 
 template <typename PointInT>
 void CloudSubtractor<PointInT>::dummySearch ()//, typename pcl::PointCloud<PointInT>::Ptr invertedPC_)
@@ -169,7 +188,7 @@ void CloudSubtractor<PointInT>::detectPlane(){
       std::stringstream ss;
       pcl::PCDWriter writer;
       ss << "STEP_03_moreRefinedPlane_.pcd";
-      writer.write<PointInT> (ss.str (), *tmpPlane, false); //*
+      //writer.write<PointInT> (ss.str (), *tmpPlane, false); //*
 
 
 
@@ -183,6 +202,16 @@ void CloudSubtractor<PointInT>::makePlaneFromCoefficients()
     PointInT maxPt;
     pcl::getMinMax3D(*input_, minPt, maxPt);
 
+    //sort coefficients and get indices
+    std::vector<float> v = {0, 0 ,0 };
+    for (int i = 0; i < 3; i++)
+        v[i] = fabs(coefficients_->values[i]);
+
+    std::vector<size_t> idx = sort_indexes(v);
+
+    //point.x = -1.0 * (1.0 * coefficients_->values[3] + coefficients_->values[1] * y + coefficients_->values[2] * z  ) / coefficients_->values[idx[2]] ;
+
+
     PointInT point;
     // construct new points on the plane by rearranging the point normal equation for one of the coordinates.
        for (float x=minPt.x; x<=maxPt.x; x+=pointIncrement_)
@@ -191,15 +220,23 @@ void CloudSubtractor<PointInT>::makePlaneFromCoefficients()
           {
               for(float z=minPt.z; z <= maxPt.z ; z+=pointIncrement_)
               {
+            // get the largest component of the plane normal to set the normal for the new grid plane and generate plane points in the plane perpendicular to the normal vector
+                    if ( idx[2] == 0 ){
+                        point.x = -1.0 * (1.0 * coefficients_->values[3] + coefficients_->values[1] * y + coefficients_->values[2] * z  ) / coefficients_->values[0] ;
+                        point.y = y;
+                        point.z = z;
+                    }
+                    if ( idx[2] == 1 ){
+                        point.x = x;
+                        point.y = -1.0 * (1.0 * coefficients_->values[3] + coefficients_->values[0] * x + coefficients_->values[2] * z  ) / coefficients_->values[1] ;
+                        point.z = z;
+                    }
+                    if ( idx[2] == 2 ){
+                        point.x = x;
+                        point.y = y;
+                        point.z = -1.0 * (1.0 * coefficients_->values[3] + coefficients_->values[0] * x + coefficients_->values[1] * y  ) / coefficients_->values[2] ;
+                    }
 
-                point.x = x;
-
-                if (coefficients_->values[1] != 0) // to avoid division by zero
-                    point.y = -1.0 * (1.0 * coefficients_->values[3] + coefficients_->values[0] * x + coefficients_->values[2] * z  ) / coefficients_->values[1] ;
-                else  // divisor is set to 0.0000001 if the coefficient is zero
-                    point.y = -1.0 * (1.0 * coefficients_->values[3] + coefficients_->values[0] * x + coefficients_->values[2] * z  ) / 0.000001 ;
-
-                point.z = z;
                 gridPC_->points.push_back (point);
               }
           }
@@ -208,10 +245,23 @@ void CloudSubtractor<PointInT>::makePlaneFromCoefficients()
         gridPC_->width = (int) gridPC_->points.size ();  gridPC_->height = 1;
         std::cout << "size of gridPlane: " << gridPC_->points.size() << std::endl;
 
+        /*
+        //////////////////////////////////////////////////////////////
+        // Visualization of keypoints along with the original cloud
+         pcl::visualization::PCLVisualizer viewer("PCL Viewer");
+         pcl::visualization::PointCloudColorHandlerCustom<PointT> keypoints_color_handler (gridPC_, 0, 255, 0);
+         viewer.setBackgroundColor( 0.0, 0.0, 0.0 );
+         viewer.addPointCloud(gridPC_, keypoints_color_handler, "keypoints");
+         viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 4, "keypoints");
+
+        while(!viewer.wasStopped ())
+          viewer.spinOnce ();
+              */
+
         std::stringstream ss;
         pcl::PCDWriter writer;
         ss << "STEP_04_PlaneFromCoeffs.pcd";
-        writer.write<PointInT> (ss.str (), *gridPC_, false); //*
+       // writer.write<PointInT> (ss.str (), *gridPC_, false); //*
 
 
 }
