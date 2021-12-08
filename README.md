@@ -7,7 +7,7 @@ Detailed explaination of the steps of the method can be found in the following p
 *Schneider, S., Coors, V. (2018). Automatische Extraktion von Fenstern in 3D Punktwolken mittels einer hierarchischen Methode. In T. P. Kersten, E. Gülch, J. Schiewe, T. H. Kolbe, & U. Stilla (Hrsg.), Wissenschaftlich-Technische Jahrestagung der DGPF und PFGK18 Tagung (pp. 559–572). Munich, Germany: Publikationen der DGPF.*
 https://www.dgpf.de/src/tagung/jt2018/proceedings/proceedings/papers/44_PFGK18_P03_Schneider_Coors.pdf
 
-View demo at: http://simstadt.hft-stuttgart.de/Essen/ESSEN/Welcome.html
+View demo at: https://urbanvis.hft-stuttgart.de/EssenPC.html
 
 **If you use this code for your work, please cite the work above.**
 
